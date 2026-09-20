@@ -1,7 +1,11 @@
 # ![logo](https://raw.githubusercontent.com/azerothcore/azerothcore.github.io/master/images/logo-github.png) AzerothCore
 
 # Dead Means Dead<br><sub>Creature Respawn Customization Module</sub>
-
+Name: mod-dead-means-dead-hotfix  
+Description: mod-dead-means-dead hotfixed by outtieTV  
+Author: outtieTV and kjack9  
+Installation instructions: Download master.zip, extract to source/modules folder, rename extracted folder to mod-dead-means-dead, delete build directory, rerun CMake, rerun Visual Studio 2022 and rebuild WorldServer  
+License: MIT License  
 ## What is this?
 This module allows an AzerothCore server administrator to disable or customize creature respawn times in dungeons, raids, or in the world. I (outtieTV) hotfixed this module so that it compiles and I fixed the boss killing crash bug.
 
