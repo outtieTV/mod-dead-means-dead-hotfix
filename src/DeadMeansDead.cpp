@@ -144,9 +144,11 @@ public:
 class DeadMeansDead_PlayerScript : public PlayerScript
 {
 public:
-    DeadMeansDead_PlayerScript() : PlayerScript("DeadMeansDead_PlayerScript") { }
+    DeadMeansDead_PlayerScript() : PlayerScript("DeadMeansDead_PlayerScript", {
+        PLAYERHOOK_ON_LOGIN
+    }) { }
 
-    void OnLogin(Player* player) override
+    void OnPlayerLogin(Player* player) override
     {
         if (options.enable && options.announce)
         {
