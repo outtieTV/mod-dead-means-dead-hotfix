@@ -107,7 +107,7 @@ enum DeadMeansDead_MapType
 //
 // Helper Functions
 //
-bool is_uint32_in_list(uint32 value, std::vector<uint32> list)
+bool is_uint32_in_list(uint32 value, const std::vector<uint32>& list)
 {
     for (uint32 listValue : list)
     {
@@ -148,13 +148,18 @@ public:
         PLAYERHOOK_ON_LOGIN
     }) { }
 
-    void OnPlayerLogin(Player* player) override
-    {
-        if (options.enable && options.announce)
-        {
-            ChatHandler(player->GetSession()).PSendSysMessage("DeadMeansDead is enabled.");
-        }
-    }
+	void OnPlayerLogin(Player* player) override
+	{
+		if (!player)
+		{
+			return;
+		}
+
+		if (options.enable && options.announce)
+		{
+			ChatHandler(player->GetSession()).PSendSysMessage("DeadMeansDead is enabled.");
+		}
+	}
 };
 
 class DeadMeansDead_UnitScript : public UnitScript
@@ -428,40 +433,47 @@ private:
             multiplier
         );
 
-        // if the newRespawnTime is 0, disable respawning for this creature
-        if (newRespawnTime == 0)
-        {
-            LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | newRespawnTime ({}) is 0. Disabling respawn.",
-                creature->GetName(),
-                creature->GetEntry(),
-                creature->GetSpawnId(),
-                newRespawnTime
-            );
+		// if the newRespawnTime is 0, disable respawning for this creature
+		if (newRespawnTime == 0)
+		{
+			LOG_DEBUG("module.DeadMeansDead",
+				"DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | newRespawnTime ({}) is 0. Disabling respawn.",
+				creature->GetName(),
+				creature->GetEntry(),
+				creature->GetSpawnId(),
+				newRespawnTime
+			);
 
-            newRespawnTime = 315360000; // 10 years
-        }
-        // check to be sure the new respawn time is greater than the minimum
-        else if (newRespawnTime < options.respawnTimeAdjustedMin)
-        {
-            LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | newRespawnTime ({}) is less than the minimum ({}). Adjusting to minimum.",
-                creature->GetName(),
-                creature->GetEntry(),
-                creature->GetSpawnId(),
-                newRespawnTime,
-                options.respawnTimeAdjustedMin
-            );
-        }
-        // check to be sure the new respawn time is less than the maximum
-        else if (newRespawnTime > options.respawnTimeAdjustedMax)
-        {
-            LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | newRespawnTime ({}) is greater than the maximum ({}). Adjusting to maximum.",
-                creature->GetName(),
-                creature->GetEntry(),
-                creature->GetSpawnId(),
-                newRespawnTime,
-                options.respawnTimeAdjustedMax
-            );
-        }
+			newRespawnTime = 315360000; // 10 years
+		}
+		// check to be sure the new respawn time is greater than the minimum
+		else if (newRespawnTime < options.respawnTimeAdjustedMin)
+		{
+			LOG_DEBUG("module.DeadMeansDead",
+				"DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | newRespawnTime ({}) is less than the minimum ({}). Adjusting to minimum.",
+				creature->GetName(),
+				creature->GetEntry(),
+				creature->GetSpawnId(),
+				newRespawnTime,
+				options.respawnTimeAdjustedMin
+			);
+
+			newRespawnTime = options.respawnTimeAdjustedMin;
+		}
+		// check to be sure the new respawn time is less than the maximum
+		else if (newRespawnTime > options.respawnTimeAdjustedMax)
+		{
+			LOG_DEBUG("module.DeadMeansDead",
+				"DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | newRespawnTime ({}) is greater than the maximum ({}). Adjusting to maximum.",
+				creature->GetName(),
+				creature->GetEntry(),
+				creature->GetSpawnId(),
+				newRespawnTime,
+				options.respawnTimeAdjustedMax
+			);
+
+			newRespawnTime = options.respawnTimeAdjustedMax;
+		}
 
         // actually adjust the respawn time
         LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead_UnitScript::_adjustCreature: Creature {} (ID: {}, Spawn: {}) | respawn time adjusted from ({}) to ({}).",
@@ -478,41 +490,64 @@ private:
         creature->SaveRespawnTime();
     }
 
-    std::string _getKillerId(Unit* killer)
-    {
-        // Construct the killer's ID
-        std::string killerIdStr;
-        if (killer->IsPlayer())
-        {
-            return killer->ToPlayer()->GetName() +  " (Player)";
-        }
-        else if (killer->ToCreature())
-        {
-            return killer->ToCreature()->GetName();
-        }
-        else if (killer->GetEntry())
-        {
-            return std::to_string(killer->GetEntry());
-        }
-        else
-        {
-            return "Unknown ID";
-        }
-    }
+	std::string _getKillerId(Unit* killer)
+	{
+		// A death does not always have a valid killer.
+		if (!killer)
+		{
+			return "Unknown / No Killer";
+		}
 
-    void _killedByDebug(Creature* creature, Unit* killer)
-    {
-        LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead:: {}", DEAD_MEANS_DEAD_SPACER);
+		if (killer->IsPlayer())
+		{
+			Player* player = killer->ToPlayer();
 
-        std::string killerIdStr = _getKillerId(killer);
+			if (player)
+			{
+				return player->GetName() + " (Player)";
+			}
 
-        LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead_UnitScript::_killedByDebug: Creature {} (ID: {}, Spawn: {}) | killed by {}",
-            creature->GetName(),
-            creature->GetEntry(),
-            creature->GetSpawnId(),
-            killerIdStr
-        );
-    }
+			return "Unknown Player";
+		}
+
+		if (Creature* creature = killer->ToCreature())
+		{
+			return creature->GetName();
+		}
+
+		uint32 entry = killer->GetEntry();
+
+		if (entry)
+		{
+			return std::to_string(entry);
+		}
+
+		return "Unknown ID";
+	}
+
+	void _killedByDebug(Creature* creature, Unit* killer)
+	{
+		if (!creature)
+		{
+			LOG_DEBUG("module.DeadMeansDead",
+				"DeadMeansDead_UnitScript::_killedByDebug: creature is null."
+			);
+
+			return;
+		}
+
+		LOG_DEBUG("module.DeadMeansDead", "DeadMeansDead:: {}", DEAD_MEANS_DEAD_SPACER);
+
+		std::string killerIdStr = _getKillerId(killer);
+
+		LOG_DEBUG("module.DeadMeansDead",
+			"DeadMeansDead_UnitScript::_killedByDebug: Creature {} (ID: {}, Spawn: {}) | killed by {}",
+			creature->GetName(),
+			creature->GetEntry(),
+			creature->GetSpawnId(),
+			killerIdStr
+		);
+	}
 };
 
 void AddDeadMeansDeadScripts()
