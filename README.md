@@ -3,7 +3,7 @@
 # Dead Means Dead<br><sub>Creature Respawn Customization Module</sub>
 
 ## What is this?
-This module allows an AzerothCore server administrator to disable or customize creature respawn times in dungeons, raids, or in the world.
+This module allows an AzerothCore server administrator to disable or customize creature respawn times in dungeons, raids, or in the world. I (outtieTV) hotfixed this module so that it compiles and I fixed the boss killing crash bug.
 
 ## Defaults
 By default, the module will disable respawns in dungeons and raids - "dead" means "**DEAD**". :skull:
